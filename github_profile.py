@@ -8,7 +8,7 @@ import certifi
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-url = "https://api.github.com/users/torvalds"
+url = "https://api.github.com/users/yxy2656228156-svg"
 request = Request(url, headers={"User-Agent": "stage-0-practice"})
 
 context = ssl.create_default_context(cafile=certifi.where())
