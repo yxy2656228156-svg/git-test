@@ -1,0 +1,5 @@
+用一句话解释什么是 API
+把“今天天气很好”翻译成英文
+列出 3 个合法的 JSON 值
+用一句话说明 json.load 和 f.read 的区别
+写一个包含 timeout 的 requests.get 示例

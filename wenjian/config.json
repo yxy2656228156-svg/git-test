@@ -1,0 +1,15 @@
+{
+  "model": "deepseek-flash",
+  "runs": 5,
+  "tags": [
+    "test",
+    "本地"
+  ]
+}{
+  "model": "deepseek-pro",
+  "runs": 5,
+  "tags": [
+    "test",
+    "本地"
+  ]
+}
