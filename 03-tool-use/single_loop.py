@@ -37,13 +37,13 @@ TOOLS = [{
 messages = [{"role": "user", "content": "What is the temperature in New York?"}]
 
 first = client.chat.completions.create(
-    model="qwen3",
+    model="qwen2.5:3b",
     messages=messages,
     tools=TOOLS,
 )
 
 assistant = first.choices[0].message
-""" 数据情况如下
+""" 数据情况如下(注意assistance是类，在访问数据时，应当遵循类的规则）
 {
     "role": "assistant",
     “content”：None
@@ -60,7 +60,7 @@ assistant = first.choices[0].message
 }
 """
 messages.append(assistant.model_dump(exclude_none=True)) #todo: 将数据转为字典，转换后数据形式如下，exclude_none=True，则是删除所有None字段数据
-"""
+"""此时经过model_dump转换之后，得到的数据为字典类型
 {
     "role": "assistant",
     "tool_calls": [
@@ -88,7 +88,7 @@ if assistant.tool_calls:
 
     #todo：单loop指的是依次工具调用不是一个api请求，完整流程：请求1 → 模型要工具 → 执行 → 请求2 → 模型给答案
     final = client.chat.completions.create(
-        model="qwen3",
+        model="qwen2.5:3b",
         messages=messages,
         tools=TOOLS,
     )
