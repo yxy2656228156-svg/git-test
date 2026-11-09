@@ -1,0 +1,108 @@
+import ast
+from LLM_factory.client import get_llm_client
+from LLM_factory.hello_agents_llm import HelloAgentsLLM
+from typing import List,Dict
+
+#Planner
+PLANNER_PROMPT_TEMPLATE = """
+你是一个顶级的AI规划专家。你的任务是将用户提出的复杂问题分解成一个由多个简单步骤组成的行动计划。
+请确保计划中的每个步骤都是一个独立的、可执行的子任务，并且严格按照逻辑顺序排列。
+你的输出必须是一个Python列表，其中每个元素都是一个描述子任务的字符串。
+
+问题: {question}
+
+请严格按照以下格式输出你的计划，```python与```作为前后缀是必要的:
+```python
+["步骤1", "步骤2", "步骤3", ...]
+```
+"""
+
+class Planner:
+    def __init__(self,llm_client:HelloAgentsLLM):
+        self.llm_client = llm_client
+
+    def plan(self,question:str) -> list[str]:
+        prompt = PLANNER_PROMPT_TEMPLATE.format(question=question)
+        messages = [{"role":"user","content":prompt}]
+
+        print("--- 正在生成计划 ---")
+        response_text = self.llm_client.think(messages=messages) or ""
+        print(f"✅ 计划已生成:\n{response_text}")
+
+        #解析plan
+        try:
+            plan_str = response_text.split("```python")[1].split("```")[0].strip()
+            plan = ast.literal_eval(plan_str)
+            return plan if isinstance(plan,list) else []
+        except (SyntaxError,ValueError,KeyError) as e:
+            print(f"error:解析plan时出错：{e}")
+            print(f"原始响应：{response_text}")
+            return []
+        except Exception as e:
+            print(f"error:解析plan时出现未知错误:{e}")
+            return []
+
+#Executor
+EXECUTOR_PROMPT_TEMPLATE = """
+你是一位顶级的AI执行专家。你的任务是严格按照给定的计划，一步步地解决问题。
+你将收到原始问题、完整的计划、以及到目前为止已经完成的步骤和结果。
+请你专注于解决“当前步骤”，并仅输出该步骤的最终答案，不要输出任何额外的解释或对话。
+
+# 原始问题:
+{question}
+
+# 完整计划:
+{plan}
+
+# 历史步骤与结果:
+{history}
+
+# 当前步骤:
+{current_step}
+
+请仅输出针对“当前步骤”的回答:
+"""
+
+class Executor:
+    def __init__(self,llm_client:HelloAgentsLLM):
+        self.llm_client = llm_client
+
+    def execute(self,question:str,plan:list[str]) -> str:
+        history = ""
+        final_answer = ""
+
+        print("\n--- 正在执行计划 ---")
+        for i,step in enumerate(plan):
+            print(f"\n-> 正在执行计划 {i+1}/{len(plan)} : {step}")
+            prompt = EXECUTOR_PROMPT_TEMPLATE.format(question=question,plan=step,history=history if history else "无",current_step=step)
+            messages = [{"role":"user","content":prompt}]
+            response_text = self.llm_client.think(messages=messages) or ""
+            history += f"步骤 {i+1}: {step}\n结果：{response_text}\n\n"
+            final_answer = response_text
+            print(f"✅ 步骤 {i+1} 已完成，结果: {final_answer}")
+
+        return final_answer
+
+class PlanAndSloveAgent:
+    def __init__(self,llm_client:HelloAgentsLLM):
+        self.llm_client = llm_client
+        self.planner = Planner(llm_client)
+        self.executor = Executor(llm_client)
+
+    def run(self,question:str):
+        print(f"\n--- 开始处理问题 ---\n问题: {question}")
+        plan = self.planner.plan(question)
+        if not plan:
+            print("\n--- 任务终止 --- \n无法生成有效的行动计划。")
+            return
+        final_answer = self.executor.execute(question,plan)
+        print(f"\n--- 任务完成 ---\n最终答案: {final_answer}")
+
+if __name__ == "__main__":
+    try:
+        llm_client = HelloAgentsLLM("deepseek_2")
+        agent = PlanAndSloveAgent(llm_client)
+        question = "现在需要用python代码来解决一个问题，你需要给出完整的python代码程序以及最终结果，问题如下：某花店在10月1日至10月7日卖出的花朵数量为：1, 1, 2, 3, 5, 8, 13。那么在10月最后一天，也就是10月31日当天，该花店卖出了多少朵花"
+        agent.run(question)
+    except ValueError as e:
+        print(f"error:{e}")
